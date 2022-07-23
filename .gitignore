@@ -2,3 +2,20 @@
 .spyproject
 
 *.weights
+*.data-00000-of-00001
+*.index
+*.png
+*.npy
+*.csv
+*.xml
+*.txt
+*.ini
+data/sound_evaluation/Missing_labels
+*.tfrecord
+*.names
+*.tar
+*.jpg
+*.json
+weights/checkpoint
+*.h5
+*.pyc
