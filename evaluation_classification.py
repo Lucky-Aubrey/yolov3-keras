@@ -28,7 +28,7 @@ yolo = build_model(num_classes)
 # yolo.load_weights('checkpoints/yolov3_voc2012_github_loss2.tf')
 # yolo.load_weights('checkpoints/yolov3_voc2012_my_loss_pre3.tf')
 
-yolo.load_weights('checkpoints/yolov3_sound_my_loss4.tf')
+# yolo.load_weights('checkpoints/yolov3_sound_my_loss4.tf')
 yolo.load_weights('checkpoints/yolov3_sound_from_scratch16.tf')
 
 #%% load data
@@ -81,7 +81,7 @@ import numpy as np
 import time
 start = time.time()
 img_i = 0
-for x, y in val_dataset.batch(bs).take(1):
+for x, y in val_dataset.batch(bs):
     output = yolo(x)
     #
     from yolo_utils import yoloBoxes, _nms
@@ -128,7 +128,7 @@ for x, y in val_dataset.batch(bs).take(1):
     
 
 check0 = time.time()
-print(f'Prediction of {ns} images using batch size of {bs}: {check0-start}s')
+print(f'Prediction of images using batch size of {bs}: {check0-start}s')
 # print(f'\nAmount images: {len(prediction_table)}')
 # for i, a in enumerate(prediction_table):
 #     print(i+1, a)

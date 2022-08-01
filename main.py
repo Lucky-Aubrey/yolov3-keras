@@ -9,7 +9,6 @@ Created on Tue May 17 23:55:42 2022
 import config
 import numpy as np
 
-file_name = 'yolov3_sound_from_scratch'
 img_size = config.IMG_SIZE # Should be multiple of 32
 grid_list = config.GRID_LIST # Basically this is img_size / 32
 num_classes = config.NUM_CLASSES
@@ -18,6 +17,7 @@ anchors = config.ANCHORS
 epochs=config.EPOCHS
 batch_size=config.BATCH_SIZE
 learning_rate = config.LEARNING_RATE
+file_name = f'yolov3_scratch_bs{batch_size}_'
 # =============================================================================
 # 
 # # =============================================================================
