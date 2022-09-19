@@ -1,6 +1,5 @@
 import config
 
-file_name = 'yolov3_2'
 img_size = config.IMG_SIZE # Should be multiple of 32
 grid_list = config.GRID_LIST # Basically this is img_size / 32
 num_classes = config.NUM_CLASSES
@@ -28,8 +27,10 @@ yolo = build_model(num_classes)
 # yolo.load_weights('checkpoints/yolov3_voc2012_github_loss5.tf')
 # yolo.load_weights('checkpoints/yolov3_voc2012_github_loss2.tf')
 # yolo.load_weights('checkpoints/yolov3_voc2012_my_loss_pre3.tf')
-yolo.load_weights('checkpoints/yolov3_sound_my_loss4.tf')
-yolo.load_weights('checkpoints/yolov3_sound_from_scratch16.tf')
+
+# yolo.load_weights('checkpoints/yolov3_sound_my_loss4.tf')
+# yolo.load_weights('checkpoints/yolov3_sound_from_scratch16.tf')
+yolo.load_weights('checkpoints/yolov3_scratch_noiseAnchors_16.tf')
 
 # =============================================================================
 # load data
@@ -74,10 +75,13 @@ import tensorflow as tf
 tfrecord = './data/sound_val.tfrecord'
 classes = './data/sound.names'
 size = 416
-anchors = np.array([(10, 13), (16, 30), (33, 23), (30, 61), (62, 45),
-                         (59, 119), (116, 90), (156, 198), (373, 326)],
-                        np.float32) / 416
+# anchors = np.array([(10, 13), (16, 30), (33, 23), (30, 61), (62, 45),
+#                          (59, 119), (116, 90), (156, 198), (373, 326)],
+#                         np.float32) / 416
+anchors = config.ANCHORS
+anchors = np.array(anchors[1]+anchors[1]+anchors[0], dtype=np.float32)
 anchor_masks = np.array([[6, 7, 8], [3, 4, 5], [0, 1, 2]])
+
 dataset = ds.load_tfrecord_dataset(
             tfrecord, classes, size)
 dataset = dataset.shuffle(512)
@@ -146,13 +150,13 @@ print(f'Draw boxes: {end-check4}s\nTotal: {end-start}s')
 # import cv2
 # cv2.imwrite('output.png', img)
 
-#%%
+# #%%
 
-# Output of detect.py
-import numpy as np
-for i, x in enumerate(output):
-    np.save(f'test_outputs/train_out_{i}', np.array(output[i]))
+# # Output of detect.py
+# import numpy as np
+# for i, x in enumerate(output):
+#     np.save(f'test_outputs/train_out_{i}', np.array(output[i]))
 
-# voc2012 dataset
-for i, x in enumerate(output):
-    np.save(f'test_outputs/train_true_{i}', np.array(targets[i]))
+# # voc2012 dataset
+# for i, x in enumerate(output):
+#     np.save(f'test_outputs/train_true_{i}', np.array(targets[i]))

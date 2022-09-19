@@ -22,14 +22,15 @@ num_classes = 4
 #
 yolo = build_model(num_classes)
 
-# yolo.load_weights('weights/yolov3_transferlearning_1.h5')
-# yolo.load_weights('weights/yolov3_voc2012.h5')
-# yolo.load_weights('checkpoints/yolov3_voc2012_github_loss5.tf')
-# yolo.load_weights('checkpoints/yolov3_voc2012_github_loss2.tf')
-# yolo.load_weights('checkpoints/yolov3_voc2012_my_loss_pre3.tf')
 
-# yolo.load_weights('checkpoints/yolov3_sound_my_loss4.tf')
-yolo.load_weights('checkpoints/yolov3_sound_from_scratch16.tf')
+# Pre-loaded, COCO anchors
+# file = 'checkpoints/yolov3_sound_my_loss4.tf'
+# Scratch, COCO anchors
+# file = 'checkpoints/yolov3_sound_from_scratch16.tf'
+# Scratch. hand-picked anchors
+file = 'checkpoints/yolov3_scratch_noiseAnchors_.tf'
+
+yolo.load_weights(file)
 
 #%% load data
 
@@ -76,11 +77,11 @@ table = tf.lookup.StaticHashTable(
     name="class_weight"
 )
 
-prediction_table = []
+
 import numpy as np
 import time
 start = time.time()
-img_i = 0
+
 output_list = []
 target_list = []
 i = 0
@@ -99,110 +100,141 @@ for x, y in val_dataset.batch(bs):
     target_list.append(y)
 
 #%%
-score_threshold_list = [0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-# score_threshold_list = [0.5, 0.9]                                     
-ap_dict = {
-    'squeal': {'recall': [], 'precision': []},
-    'wirebrush': {'recall': [], 'precision': []},
-    'click':  {'recall': [], 'precision': []},
-    'artefact': {'recall': [], 'precision': []}
-    }
-for score_threshold in score_threshold_list:
-    for o,y in zip(output_list,target_list):
-        # TODO save outputs into a textfile for looping over score_thresholds
-        #[BS][BOXES/SCORES/CLASSES/VALID_DETECTIONS][...]
-        result = _nms(o, \
-             num_classes, \
-             max_output_size=100, \
-             iou_threshold=0.5, \
-             score_threshold=score_threshold, \
-             soft_nms_sigma=0.)
-            
-        for bs_i, res in enumerate(result):
-            boxes, scores, classes, valid_detections = res
-            vd = valid_detections[0]
-            if vd == 0:
-                unique_classes = []
-            else:
-                unique_classes, _ = tf.unique(
-                    tf.squeeze(
-                        tf.stack(classes[:vd],0),0))
-        
-            compare_table = {
-                0: ['F','F'],
-                1: ['F','F'],
-                2: ['F','F'],
-                3: ['F','F'],
-                }
-            true_class = int(table.lookup(y[bs_i]))
-            if true_class != -1:
-                compare_table[true_class][1] = 'T'
-            
-            for c in unique_classes:
-                pred_class = int(c)
-                compare_table[pred_class][0] = 'T'
-                
-            prediction_table.append(compare_table)
-            img_i+=1
-    
-        
-    # Evaluate Table
-    
-    res_table = {
-        'squeal': {'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0},
-        'wirebrush': {'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0},
-        'click': {'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0},
-        'artefact': {'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0}
-        }
-    
-    for pred in prediction_table:
-        for key in pred:
-            comparison = pred[key][0]+pred[key][1]
-            table_key = name_dict[key]
-            if comparison == 'TT':
-                res_table[table_key]['TP'] +=1
-            elif comparison == 'TF':
-                res_table[table_key]['FP'] +=1
-            elif comparison == 'FT':
-                res_table[table_key]['FN'] +=1
-            elif comparison == 'FF':
-                res_table[table_key]['TN'] +=1
-                
-    
-    for key in res_table:
-        TP = res_table[key]['TP']
-        FP = res_table[key]['FP']
-        FN = res_table[key]['FN']
-        TN = res_table[key]['TN']
-        recall =  TP / (TP+FN)
-        precision = TP / (TP+FP)
-        f1 = 2 * recall * precision / (recall + precision)
-        res_table[key]['recall'] = round(recall,2)
-        res_table[key]['precision'] = round(precision,2)
-        res_table[key]['f1'] =  round(f1,2)
-        ap_dict[key]['recall'].append(recall)
-        ap_dict[key]['precision'].append(precision)
-#%%
-for key in ap_dict:
-    precisions = ap_dict[key]['precision']
-    recalls = ap_dict[key]['recall']
-    
-    # sort by recall
-    recalls, precisions = list(zip(*sorted(zip(recalls,precisions))))
-    recalls = list(recalls)
-    precisions = list(precisions)
-    # add entry for (recall = 0, precision = precisions[0]
-    recalls.insert(0, 0.)
-    precisions.insert(0, precisions[0])
-    
-    ap = np.trapz(precisions, recalls)
-    ap_dict[f'{key}']['AP'] = ap
-    print(f'AP for {key}: {ap}')
 
-mAP = sum([ap_dict[f'{key}']['AP'] for key in ap_dict])/len(ap_dict)
-print(f'mAP: {mAP}')
-# #%% Save as json file
-# import json
-# file_name = 'yolov3_sound_from_scratch16_iou0_5_score0_5'
-# with open(f'evaluation/{file_name}.json','w+') as f:
-#     json.dump(res_table, f, indent=4)
+iou_threshold_list = [0.5]
+score_threshold_list = [0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+# score_threshold_list = [0.5]   
+ap_results = {}
+img_i = 0
+for iou_threshold in iou_threshold_list:
+    ap_results[iou_threshold] = {}
+                                  
+    ap_dict = {
+        'squeal': {'recall': [], 'precision': []},
+        'wirebrush': {'recall': [], 'precision': []},
+        'click':  {'recall': [], 'precision': []},
+        'artefact': {'recall': [], 'precision': []}
+        }
+    for score_threshold in score_threshold_list:
+        prediction_table = []
+        for o,y in zip(output_list,target_list):
+            # TODO save outputs into a textfile for looping over score_thresholds
+            #[BS][BOXES/SCORES/CLASSES/VALID_DETECTIONS][...]
+            result = _nms(o, \
+                 num_classes, \
+                 max_output_size=100, \
+                 iou_threshold=iou_threshold, \
+                 score_threshold=score_threshold, \
+                 soft_nms_sigma=0.)
+                
+            for bs_i, res in enumerate(result):
+                boxes, scores, classes, valid_detections = res
+                vd = valid_detections[0]
+                if vd == 0:
+                    unique_classes = []
+                else:
+                    unique_classes, _ = tf.unique(
+                        tf.squeeze(
+                            tf.stack(classes[:vd],0),0))
+            
+                compare_table = {
+                    0: ['F','F'],
+                    1: ['F','F'],
+                    2: ['F','F'],
+                    3: ['F','F'],
+                    }
+                true_class = int(table.lookup(y[bs_i]))
+                if true_class != -1:
+                    compare_table[true_class][1] = 'T'
+                
+                for c in unique_classes:
+                    pred_class = int(c)
+                    compare_table[pred_class][0] = 'T'
+                    
+                prediction_table.append(compare_table)
+                img_i+=1
+        
+            
+        # Evaluate Table
+        print(len(prediction_table))
+        res_table = {
+            'squeal': {'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0},
+            'wirebrush': {'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0},
+            'click': {'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0},
+            'artefact': {'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0}
+            }
+        
+        tpi = 0
+        for pred in prediction_table:
+            for key in pred:
+                comparison = pred[key][0]+pred[key][1]
+                table_key = name_dict[key]
+                if comparison == 'TT':
+                    res_table[table_key]['TP'] +=1
+                elif comparison == 'TF':
+                    res_table[table_key]['FP'] +=1
+                elif comparison == 'FT':
+                    res_table[table_key]['FN'] +=1
+                elif comparison == 'FF':
+                    res_table[table_key]['TN'] +=1
+                    
+        
+        for key in res_table:
+            TP = res_table[key]['TP']
+            FP = res_table[key]['FP']
+            FN = res_table[key]['FN']
+            TN = res_table[key]['TN']
+            recall =  TP / (TP+FN) if TP+FN > 0 else None
+            precision = TP / (TP+FP) if TP+FP > 0 else None
+            if recall != None and precision != None:
+                ap_dict[key]['recall'].append(recall)
+                ap_dict[key]['precision'].append(precision)
+
+    
+    for key in ap_dict:
+        precisions = ap_dict[key]['precision']
+        recalls = ap_dict[key]['recall']
+        
+        # sort by recall
+        recalls, precisions = list(zip(*sorted(zip(recalls,precisions))))
+        recalls = list(recalls)
+        precisions = list(precisions)
+        # add entry for (recall = 0, precision = precisions[0]
+        recalls.insert(0, 0.)
+        precisions.insert(0, precisions[0])
+        
+        ap_dict[key]['precision'] = precisions
+        ap_dict[key]['recall'] = recalls
+        
+        ap = np.trapz(precisions, recalls)
+        # ap_dict[f'{key}']['AP'] = ap
+        ap_results[iou_threshold][key] = ap
+        
+        
+        # print(f'AP for {key}: {ap}')
+    
+    # mAP = sum([ap_dict[f'{key}']['AP'] for key in ap_dict])/len(ap_dict)
+    mAP = sum([ap_results[iou_threshold][key] for key in ap_dict])/len(ap_dict)
+    ap_results[iou_threshold]['mAP'] = mAP
+    # print(f'mAP: {mAP}')
+    
+    # print(ap_dict)
+
+# #%% round
+# for iou in ap_results:
+#     for key in ap_results[iou]:
+#         ap_results[iou][key] = round(ap_results[iou][key], 2)
+# print(ap_results)
+#%% Save as json file
+import json
+import re
+
+file = re.search('checkpoints/(.*).tf', file).group(1)
+file_name = file +'_mAP'
+with open(f'evaluation_classification/{file_name}.json','w+') as f:
+    json.dump(ap_results, f, indent=4)
+    
+# save prc curve
+file_name = file +'_prc'
+with open(f'evaluation_classification/{file_name}.json','w+') as f:
+    json.dump(ap_dict, f, indent=4)

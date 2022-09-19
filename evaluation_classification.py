@@ -28,8 +28,10 @@ yolo = build_model(num_classes)
 # yolo.load_weights('checkpoints/yolov3_voc2012_github_loss2.tf')
 # yolo.load_weights('checkpoints/yolov3_voc2012_my_loss_pre3.tf')
 
-# yolo.load_weights('checkpoints/yolov3_sound_my_loss4.tf')
-yolo.load_weights('checkpoints/yolov3_sound_from_scratch16.tf')
+# file = 'checkpoints/yolov3_sound_my_loss4.tf'
+# file = 'checkpoints/yolov3_sound_from_scratch16.tf'
+file = 'checkpoints/yolov3_scratch_noiseAnchors_.tf'
+yolo.load_weights(file)
 
 #%% load data
 
@@ -57,7 +59,7 @@ val_dataset = dataset.map(process_image_for_classification).map(scale)
 
 #%%
 
-bs = 2 # Batch size: works only for bs > 1 # TODO implement for bs = 1
+bs = 16 # Batch size: works only for bs > 1 # TODO implement for bs = 1
 anchors = config.ANCHORS
 
 name_dict = {
@@ -82,6 +84,7 @@ import time
 start = time.time()
 img_i = 0
 for x, y in val_dataset.batch(bs):
+    print(img_i)
     output = yolo(x)
     #
     from yolo_utils import yoloBoxes, _nms
@@ -124,7 +127,7 @@ for x, y in val_dataset.batch(bs):
             compare_table[pred_class][0] = 'T'
             
         prediction_table.append(compare_table)
-        img_i+=1
+    img_i+=1
     
 
 check0 = time.time()
@@ -161,18 +164,23 @@ for key in res_table:
     FP = res_table[key]['FP']
     FN = res_table[key]['FN']
     TN = res_table[key]['TN']
-    recall =  TP / (TP+FN)
-    precision = TP / (TP+FP)
-    f1 = 2 * recall * precision / (recall + precision)
-    res_table[key]['recall'] = round(recall,2)
-    res_table[key]['precision'] = round(precision,2)
-    res_table[key]['f1'] =  round(f1,2)
+    recall =  TP / (TP+FN) if TP+FN > 0 else None
+    precision = TP / (TP+FP) if TP+FP > 0 else None
+    f1 = 2 * recall * precision / (recall + precision) \
+        if recall != None and precision != None else None
+    res_table[key]['recall'] = round(recall,2) if recall != None else None
+    res_table[key]['precision'] = round(precision,2) if precision != None else None
+    res_table[key]['f1'] =  round(f1,2) if f1 != None else None
     
 for key in res_table:
     print(key,':', res_table[key])
 
-# #%% Save as json file
-# import json
-# file_name = 'yolov3_sound_from_scratch16_iou0_5_score0_5'
-# with open(f'evaluation/{file_name}.json','w+') as f:
-#     json.dump(res_table, f, indent=4)
+
+#%% Save as json file
+import json
+import re
+
+file = re.search('checkpoints/(.*).tf', file).group(1)
+file_name = file
+with open(f'evaluation_classification/{file_name}.json','w+') as f:
+    json.dump(res_table, f, indent=4)

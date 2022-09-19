@@ -33,21 +33,24 @@ def draw_box(image, box, color=(1,0,0), xywh=False):
     cv2.rectangle(img,(left, bottom), (right, top), color=color, thickness=thick)
     return img
 
+color_dict = {
+    0: (0,255,0),
+    1: (0,255,255),
+    2: (255,128,0),
+    3: (255,0,255)
+    }
+name_dict = {
+    0: 'Artefact',
+    1: 'Click',
+    2: 'Squeal',
+    3: 'Wirebrush'
+    }
+
 def draw_output(img, boxes, scores, classes, valid_detections):
     vd = valid_detections[0]
+    shift_click = np.arange(0,vd*20,20)
+    click_i = 0
     for box, score, p_class in zip(boxes[0,:vd], scores[0,:vd], classes[0,:vd]):
-        color_dict = {
-            0: (0,255,0),
-            1: (0,255,255),
-            2: (255,128,0),
-            3: (255,0,255)
-            }
-        name_dict = {
-            0: 'Artefact',
-            1: 'Click',
-            2: 'Squeal',
-            3: 'Wirebrush'
-            }
         imgHeight, imgWidth, _ = img.shape
         x1y1 = (int(box[0]*imgWidth), int(box[1]*imgHeight))
         x2y2 = (int(box[2]*imgWidth), int(box[3]*imgHeight))
@@ -59,11 +62,25 @@ def draw_output(img, boxes, scores, classes, valid_detections):
         text_coord = (x1y1[0]-2,x1y1[1]-10)
         if text_coord[1] < 10:
             text_coord = (x1y1[0]-2,x2y2[1]+15)
+        if int(p_class) == 2:
+            x = max(0,x1y1[0]-100)
+            y = x2y2[1]-20
+            text_coord = (x,y)
+        if int(p_class) == 0:
+            x = max(0,x1y1[0]-140)
+            y = int((x1y1[1]+x2y2[1])/2)
+            text_coord = (x,y)
+        if int(p_class) == 1:
+            x = max(0,x1y1[0]-80)
+            y = int((x1y1[1]+x2y2[1])/2) + shift_click[click_i]
+            text_coord = (x,y)
+            click_i+=1
+            
         img = cv2.putText(img, 
                           str(np.round(score,2))+' '+name_dict[int(p_class)], 
                           text_coord, 
                           cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                          1,
+                          0.8,
                           color_dict[int(p_class)],
                           2)
     return img

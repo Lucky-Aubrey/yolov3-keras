@@ -17,7 +17,13 @@ anchors = config.ANCHORS
 epochs=config.EPOCHS
 batch_size=config.BATCH_SIZE
 learning_rate = config.LEARNING_RATE
-file_name = f'yolov3_scratch_bs{batch_size}_'
+file_name = config.file_name
+mode = config.mode
+
+print('model:', file_name)
+print('mode:', mode)    
+print('classes:', num_classes)
+
 # =============================================================================
 # 
 # # =============================================================================
@@ -75,9 +81,8 @@ from github_load_datasets import (
     get_voc2012_datasets,
     get_sound_datasets)
 
-# train_dataset, val_dataset = get_voc2012_datasets()
-train_dataset, val_dataset = get_sound_datasets()
-num_classes = 4
+train_dataset, val_dataset = get_voc2012_datasets()
+# train_dataset, val_dataset = get_sound_datasets()
 
 
 #%% Model
@@ -92,24 +97,36 @@ import tensorflow as tf
 # Create model for <num_classes>
 yolo = build_model(num_classes) 
 
-# # Create model and load it with weights of a pretrained coco model (80 classes)
-# coco_yolo = build_model(80)
-# coco_yolo.load_weights('yolov3_coco.tf')
-
-# # Get weights of the darknet layers and set it into the corresponding darknet
-# # layers
-# yolo.get_layer('yolo_darknet').set_weights(
-#     coco_yolo.get_layer('yolo_darknet').get_weights())
-
-# # freeze darknet
-# def freeze_all(model, frozen=True):
-#     model.trainable = not frozen
-#     if isinstance(model, tf.keras.Model):
-#         for l in model.layers:
-#             freeze_all(l, frozen)
-# def unfreeze_all(model, frozen=False):
-#     freeze_all(model, frozen)
-# freeze_all(yolo.get_layer('yolo_darknet')) # TODO uncomment
+# freeze darknet
+def freeze_all(model, frozen=True):
+    model.trainable = not frozen
+    if isinstance(model, tf.keras.Model):
+        for l in model.layers:
+            freeze_all(l, frozen)
+def unfreeze_all(model, frozen=False):
+    freeze_all(model, frozen)
+    
+if mode == 'darknet':
+    # Create model and load it with weights of a pretrained coco model (80 classes)
+    coco_yolo = build_model(80)
+    coco_yolo.load_weights('yolov3_coco.tf')
+    
+    # Get weights of the darknet layers and set it into the corresponding darknet
+    # layers
+    yolo.get_layer('yolo_darknet').set_weights(
+        coco_yolo.get_layer('yolo_darknet').get_weights())
+elif mode == 'frozenDarknet':
+    # Create model and load it with weights of a pretrained coco model (80 classes)
+    coco_yolo = build_model(80)
+    coco_yolo.load_weights('yolov3_coco.tf')
+    
+    # Get weights of the darknet layers and set it into the corresponding darknet
+    # layers
+    yolo.get_layer('yolo_darknet').set_weights(
+        coco_yolo.get_layer('yolo_darknet').get_weights())
+    # Freezing Darknet (Feature Map)
+    freeze_all(yolo.get_layer('yolo_darknet')) # TODO uncomment
+    
 # # Conv0
 # yolo.get_layer('yolo_conv_0').set_weights(
 #     coco_yolo.get_layer('yolo_conv_0').get_weights())
@@ -187,9 +204,10 @@ from tensorflow.keras.callbacks import (
 # np.save('history/'+file_name+'_pre.npy', history.history)
 
 callbacks = [ReduceLROnPlateau(verbose=1),
-             EarlyStopping(patience=3, verbose=1),
-             ModelCheckpoint('checkpoints/'+file_name+'{epoch}.tf',
-                            verbose=1, save_weights_only=True),]
+             # EarlyStopping(patience=3, verbose=1),
+             ModelCheckpoint('checkpoints/'+file_name+'.tf',
+                            verbose=1, save_weights_only=True,
+                            save_best_only=True),]
 # Train unfreezed
 history = yolo.fit(train_dataset, batch_size=batch_size, epochs=epochs,
                     # validation_data = [x_train, y_train]

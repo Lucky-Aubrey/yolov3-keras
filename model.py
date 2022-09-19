@@ -121,7 +121,6 @@ def build_model(num_classes, shape=(416, 416, 3)):
     out0 = yolo_output(x, 1024, 3, num_classes, name='yolo_output_0')
     
     # 26 by 26 detection head
-    
     x = yolo_conv((x, x_61), [256, 512, 256, 512, 256, ], 
                       [1,3,1,3,1], 
                       [1,1,1,1,1],
@@ -144,6 +143,7 @@ def build_model(num_classes, shape=(416, 416, 3)):
     
     return tf.keras.Model(inputs=inputs, outputs=outputs, name='darknet_53')
 
+# TODO delete
 def build_model_2(num_classes, shape=(416, 416, 3)):
     
     #Darknet53

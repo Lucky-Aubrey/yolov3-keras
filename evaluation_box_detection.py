@@ -38,8 +38,6 @@ def resize_img(image):
 
 images = images.map(resize_img)
 
-#%% Test npy
-
 
 #%%
 
@@ -71,8 +69,11 @@ yolo = build_model(num_classes)
 # yolo.load_weights('checkpoints/yolov3_voc2012_github_loss5.tf')
 # yolo.load_weights('checkpoints/yolov3_voc2012_github_loss2.tf')
 # yolo.load_weights('checkpoints/yolov3_voc2012_my_loss_pre3.tf')
-yolo.load_weights('checkpoints/yolov3_sound_my_loss4.tf')
-# yolo.load_weights('checkpoints/yolov3_sound_from_scratch16.tf')
+
+# file = 'checkpoints/yolov3_sound_my_loss4.tf'
+# file = 'checkpoints/yolov3_sound_from_scratch16.tf'
+file = 'checkpoints/yolov3_scratch_noiseAnchors_.tf'
+yolo.load_weights(file)
 
 #%%
 
@@ -87,8 +88,8 @@ import numpy as np
 import time
 from yolo_utils import intersectionOverUnion
 start = time.time()
-img_i = 0
 for i, img in enumerate(images.batch(bs)):
+    print(i)
     # Prediction
     output = yolo(img)
     # True labels
@@ -178,26 +179,34 @@ for key in evaluation_table:
     recall=  TP / (TP+FN) if TP+FN > 0 else None
     precision = TP / (TP+FP) if TP+FP > 0 else None
     f1 = 2 * recall * precision / (recall + precision) \
-        if recall != None or precision != None else None
-    evaluation_table[key].update({'recall': round(recall,2)})
-    evaluation_table[key].update({'precision': round(precision,2)})
-    evaluation_table[key].update({'f1': round(f1,2)})
+        if recall != None and precision != None else None
+    evaluation_table[key].update({'recall': round(recall,2) \
+                                  if recall != None else None})
+    evaluation_table[key].update({'precision': round(precision,2) \
+                                  if precision != None else None})
+    evaluation_table[key].update({'f1': round(f1,2) \
+                                  if f1 != None else None})
     
 for key in evaluation_table:
     print(name_dict[key],':', evaluation_table[key])
 
-#%%
+# #%%
 
-import json
-with open('evaluation_detection/yolov3_sound_my_loss4_iou0_5_score0_5.json', 'w', encoding='utf-8') as f:
-    json.dump(evaluation_table, f, ensure_ascii=False, indent=4)
+# import json
+# import re
+
+# file = re.search('checkpoints/(.*).tf', file).group(1)
+# file_name = file
+
+# with open(f'evaluation_detection/{file_name}.json', 'w', encoding='utf-8') as f:
+#     json.dump(evaluation_table, f, ensure_ascii=False, indent=4)
     
 
-with open('evaluation_detection/yolov3_sound_my_loss4_iou0_5_score0_5.json')\
-    as f:
-        table = json.load(f)
+# with open('evaluation_detection/yolov3_sound_my_loss4_iou0_5_score0_5.json')\
+#     as f:
+#         table = json.load(f)
         
-import pandas as pd
-table = pd.DataFrame(table)
-table = table.transpose()
-print(table.to_latex(index=False))
+# import pandas as pd
+# table = pd.DataFrame(table)
+# table = table.transpose()
+# print(table.to_latex(index=False))
