@@ -50,7 +50,7 @@ def get_sound_datasets():
     #                     (59, 119), (116, 90), (156, 198), (373, 326)],
     #                    np.float32) / 416
     anchors = config.ANCHORS
-    anchors = np.array(anchors[1]+anchors[1]+anchors[0], dtype=np.float32)
+    anchors = np.array(anchors[2]+anchors[1]+anchors[0], dtype=np.float32)
     anchor_masks = np.array([[6, 7, 8], [3, 4, 5], [0, 1, 2]])
     train_dataset = dataset.load_tfrecord_dataset(
         train_dataset, classes, size)
